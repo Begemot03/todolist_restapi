@@ -1,81 +1,41 @@
+using Serilog;
 
-using System.Text;
-
-var builder = WebApplication.CreateBuilder(args);
-
-builder.Logging.AddFile(Path.Combine(Directory.GetCurrentDirectory(), "logger.txt"));
-
-var app = builder.Build();
-
-var rnd = new Random();
-
-app.Use(async (context, next) => 
+namespace API
 {
-    foreach(var (key, value) in context.Request.Cookies )
+    internal class Program
     {
-        context.Response.Cookies.Delete(key);
-    }
-
-    await next.Invoke(context);
-});
-
-app.MapGet("/", async (context) => 
-{
-    var sb = new StringBuilder();
-
-    foreach(var (key, value) in context.Request.Cookies )
-    {
-        sb.AppendLine($"{key}:\t\t{value}");
-    }
-
-    await context.Response.WriteAsync(sb.ToString());
-});
-
-app.Run();
-
-class FileLogger(string path) : ILogger, IDisposable
-{
-    string path = path;
-    static object _lock = new();
-
-    public IDisposable? BeginScope<TState>(TState state) where TState : notnull
-    {
-        return this;
-    }
-
-    public void Dispose() {}
-
-    public bool IsEnabled(LogLevel logLevel)
-    {
-        return true;
-    }
-
-    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception? exception, Func<TState, Exception?, string> formatter)
-    {
-        lock(_lock)
+        public static IHostBuilder CreateHostBuilder(string[] args)
         {
-            File.AppendAllText(path, formatter(state, exception) + Environment.NewLine);
+            var configurationProvider = new Configuration.Provider.ConfigurationProvider();
+            var service = configurationProvider.AppSettings.Service;
+
+            return Host.CreateDefaultBuilder(args).ConfigureWebHostDefaults(webBuilder => webBuilder
+                .UseStartup<Startup>()
+                .UseUrls($"http://*:{service.Port}")
+                .UseConfiguration(configurationProvider.GetConfiguration()));
         }
-    }
-}
+        private static void Main(string[] args)
+        {
+            var configurationProvider = new Configuration.Provider.ConfigurationProvider();
+            var service = configurationProvider.AppSettings.Service;
 
-class FileLoggerProvider(string path) : ILoggerProvider
-{
-    string path = path;
-    public ILogger CreateLogger(string categoryName)
-    {
-        return new FileLogger(path);
-    }
+            Log.Logger = new LoggerConfiguration()
+                .WriteTo.Console()
+                .WriteTo.File("logs/myapp.txt", rollingInterval: RollingInterval.Hour)
+                .CreateLogger();
 
-    public void Dispose() {}
-}
+            try
+            {
+                Log.Information($"Initializing 'Example API' service on port '{service.Port}'");
+            } 
+            catch(Exception exception)
+            {
 
-static class FileLoggerExtensions
-{
-    public static ILoggingBuilder AddFile(this ILoggingBuilder builder, string path)
-    {
-        builder.AddProvider(new FileLoggerProvider(path));
+            } 
+            finally
+            {
 
-        return builder;
+            }
+        }
     }
 }
