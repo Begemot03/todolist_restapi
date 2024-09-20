@@ -1,0 +1,19 @@
+{
+  "Version": 1,
+  "Hash": "9+ldayZbTxaltwiE2mgCAjsnpU3RvRKYYn6NajZo934=",
+  "Source": "todolist_api",
+  "BasePath": "_content/todolist_api",
+  "Mode": "Default",
+  "ManifestType": "Build",
+  "ReferencedProjectsConfiguration": [],
+  "DiscoveryPatterns": [
+    {
+      "Name": "todolist_api\\wwwroot",
+      "Source": "todolist_api",
+      "ContentRoot": "D:\\Projects\\programs\\шарага\\todolist_api\\todolist_api\\wwwroot\\",
+      "BasePath": "_content/todolist_api",
+      "Pattern": "**"
+    }
+  ],
+  "Assets": []
+}

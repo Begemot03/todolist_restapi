@@ -1,0 +1,25 @@
+{
+  "Files": [
+    {
+      "Id": "D:\\Projects\\programs\\шарага\\todolist_api\\todolist_api\\wwwroot\\index.html",
+      "PackagePath": "staticwebassets\\index.html"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.build.todolist_api.props",
+      "PackagePath": "build\\todolist_api.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.buildMultiTargeting.todolist_api.props",
+      "PackagePath": "buildMultiTargeting\\todolist_api.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.buildTransitive.todolist_api.props",
+      "PackagePath": "buildTransitive\\todolist_api.props"
+    },
+    {
+      "Id": "obj\\Debug\\net8.0\\staticwebassets\\msbuild.todolist_api.Microsoft.AspNetCore.StaticWebAssets.props",
+      "PackagePath": "build\\Microsoft.AspNetCore.StaticWebAssets.props"
+    }
+  ],
+  "ElementsToRemove": []
+}

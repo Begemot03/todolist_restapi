@@ -1,0 +1,33 @@
+Now listening on: http://localhost:5229
+Application started. Press Ctrl+C to shut down.
+Hosting environment: Development
+Content root path: D:\Projects\programs\шарага\todolist_api\todolist_api
+Hello world
+Hello world
+Hello world
+Application is shutting down...
+Now listening on: http://localhost:5229
+Application started. Press Ctrl+C to shut down.
+Hosting environment: Development
+Content root path: D:\Projects\programs\шарага\todolist_api\todolist_api
+Application is shutting down...
+Now listening on: http://localhost:5229
+Application started. Press Ctrl+C to shut down.
+Hosting environment: Development
+Content root path: D:\Projects\programs\шарага\todolist_api\todolist_api
+Application is shutting down...
+Now listening on: http://localhost:5229
+Application started. Press Ctrl+C to shut down.
+Hosting environment: Development
+Content root path: D:\Projects\programs\шарага\todolist_api\todolist_api
+Application is shutting down...
+Now listening on: http://localhost:5229
+Application started. Press Ctrl+C to shut down.
+Hosting environment: Development
+Content root path: D:\Projects\programs\шарага\todolist_api\todolist_api
+Application is shutting down...
+Now listening on: http://localhost:5229
+Application started. Press Ctrl+C to shut down.
+Hosting environment: Development
+Content root path: D:\Projects\programs\шарага\todolist_api\todolist_api
+Application is shutting down...
