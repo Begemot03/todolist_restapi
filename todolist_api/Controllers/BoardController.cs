@@ -1,34 +1,49 @@
+using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using todolist_api.Database;
 using todolist_api.Models;
-using todolist_api.Repositories;
+using System.Security.Claims;
 
 namespace todolist_api.Controllers
 {
     [Route("api/[controller]")]
+    [Authorize]
     [ApiController]
-    public class BoardController(IBaseRepository<Board> boards, IBaseRepository<User> users) : ControllerBase
+    public class BoardController(ApplicationContext context) : ControllerBase
     {
-        public IBaseRepository<Board> Boards { get; set; } = boards;
-        public IBaseRepository<User> Users { get; set; } = users;
+        private readonly ApplicationContext Context = context;
 
         [HttpPost]
-        public async Task<ActionResult> CreateNewBoard([FromQuery]int userId, [FromBody]Board board)
+        public async Task<ActionResult> CreateNewBoard([FromBody]BoardDto boardDto)
         {
-            if(board == null)
+            if(boardDto == null || string.IsNullOrEmpty(boardDto.Title))
             {
                 return BadRequest("Invalid board data");
             }
 
+            var username = HttpContext.User.FindFirstValue(ClaimTypes.UserData);
+
+            if (string.IsNullOrEmpty(username))
+            {
+                return Unauthorized();
+            }
+
             try
             {
-                var user = await Users.Get(userId);
+                var user = await Context.Users.SingleAsync(user => user.Username == username);
 
-                board.Users.Add(user);
+                var board = new Board()
+                {
+                    Title = boardDto.Title
+                };
+
+                Context.Boards.Add(board);
                 user.Boards.Add(board);
 
-                await Boards.Create(board);
+                await Context.SaveChangesAsync();
 
-                return CreatedAtAction(nameof(GetBoard), new { board.Id }, board);
+                return CreatedAtAction(nameof(GetBoard), new { board.Id }, boardDto);
             }
             catch(Exception e)
             {
@@ -40,7 +55,21 @@ namespace todolist_api.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult> GetBoard(int id)
         {
-            return new JsonResult(await Boards.Get(id));
+            var board = await Context.Boards
+                .AsNoTracking()
+                .Select(b => new BoardDto
+                {
+                    Id = b.Id,
+                    Title = b.Title
+                })
+                .SingleOrDefaultAsync(b => b.Id == id);
+
+            if (board == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(new { Board = board });
         }
 
     }
