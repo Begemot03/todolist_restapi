@@ -24,11 +24,6 @@ namespace todolist_api.Controllers
 
             var username = HttpContext.User.FindFirstValue(ClaimTypes.UserData);
 
-            if (string.IsNullOrEmpty(username))
-            {
-                return Unauthorized();
-            }
-
             try
             {
                 var user = await Context.Users.SingleAsync(user => user.Username == username);
@@ -55,21 +50,48 @@ namespace todolist_api.Controllers
         [HttpGet("{id}")]
         public async Task<ActionResult> GetBoard(int id)
         {
-            var board = await Context.Boards
-                .AsNoTracking()
-                .Select(b => new BoardDto
-                {
-                    Id = b.Id,
-                    Title = b.Title
-                })
-                .SingleOrDefaultAsync(b => b.Id == id);
+            if(id < 0) return BadRequest("Invalid Id");
 
-            if (board == null)
+            var username = HttpContext.User.FindFirstValue(ClaimTypes.UserData);
+
+            try
             {
-                return NotFound();
-            }
+                var hasAccess = await UserHasAccessToBoard(id, username);
 
-            return Ok(new { Board = board });
+                if(!hasAccess)
+                {
+                    return NotFound();
+                }
+
+                var board = await Context.Boards
+                    .AsNoTracking()
+                    .Where(b => b.Id == id)
+                    .Select(b => new BoardDto()
+                    {
+                        Id = b.Id,
+                        Title = b.Title
+                    })
+                    .FirstOrDefaultAsync();
+            
+
+                if (board == null)
+                {
+                    return NotFound();
+                }
+
+                return Ok(new { Board = board });
+            }
+            catch(Exception e)
+            {
+                return StatusCode(500, $"Internal server error: {e.Message}");
+            }
+        }
+
+        private async Task<bool> UserHasAccessToBoard(int boardId, string username)
+        {
+            return await Context.Boards
+                .AsNoTracking()
+                .AnyAsync(b => b.Id == boardId && b.Users.Any(u => u.Username == username));
         }
 
     }

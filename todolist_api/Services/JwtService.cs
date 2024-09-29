@@ -33,7 +33,7 @@ namespace todolist_api.Services
                 issuer: _issuer,
                 audience: _audience,
                 claims: claims,
-                expires: DateTime.Now.AddSeconds(30),
+                expires: DateTime.Now.AddMinutes(10),
                 signingCredentials: credentials
             );
 

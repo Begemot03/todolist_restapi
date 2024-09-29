@@ -44,9 +44,6 @@ namespace todolist_api.Controllers
             {
                 return StatusCode(500, $"Internal server error: {e.Message}");
             }
-
-
-            
         }
     }
 }
