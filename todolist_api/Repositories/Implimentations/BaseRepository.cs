@@ -5,14 +5,9 @@ using Task = System.Threading.Tasks.Task;
 
 namespace todolist_api.Repositories
 {
-    public class BaseRepository<TDbModel> : IBaseRepository<TDbModel> where TDbModel : BaseModel
+    public class BaseRepository<TDbModel>(ApplicationContext context) : IBaseRepository<TDbModel> where TDbModel : BaseModel
     {
-        private readonly ApplicationContext _context;
-
-        public BaseRepository(ApplicationContext context)
-        {
-            _context = context;
-        }
+        private readonly ApplicationContext _context = context;
 
         public async Task<TDbModel> Create(TDbModel model)
         {

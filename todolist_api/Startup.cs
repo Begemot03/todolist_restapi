@@ -1,12 +1,11 @@
 using System.Text;
-using System.Text.Unicode;
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using todolist_api.Database;
 using todolist_api.Models;
 using todolist_api.Repositories;
+using todolist_api.Services;
 using Task = todolist_api.Models.Task;
 
 namespace todolist_api
@@ -32,14 +31,17 @@ namespace todolist_api
                         ValidateIssuerSigningKey = true,
                         ValidIssuer = Configuration["JWT:Issuer"],
                         ValidAudience = Configuration["JWT:Audience"],
-                        IssuerSigningKey = new SymmetricSecurityKey(UTF8Encoding.UTF8.GetBytes(Configuration["JWT:Key"]))
+                        IssuerSigningKey = new SymmetricSecurityKey(UTF8Encoding.UTF8.GetBytes(Configuration["JWT:Key"])),
+                        ClockSkew = TimeSpan.Zero
                     };
                 });
 
-            services.AddTransient<IBaseRepository<User>, BaseRepository<User>>();
+            services.AddTransient<UserLoginRepository>();
             services.AddTransient<IBaseRepository<Board>, BaseRepository<Board>>();
             services.AddTransient<IBaseRepository<List>, BaseRepository<List>>();
             services.AddTransient<IBaseRepository<Task>, BaseRepository<Task>>();
+
+            services.AddSingleton<JwtService>();
 
             services.AddMvc();
         }
@@ -50,12 +52,12 @@ namespace todolist_api
             {
                 app.UseDeveloperExceptionPage();
             }
-
             app.UseHttpsRedirection();
             app.UseRouting();
             
             app.UseAuthentication();
             app.UseAuthorization();
+
             
             app.UseEndpoints(endPoint => 
             {

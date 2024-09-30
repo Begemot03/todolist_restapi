@@ -1,41 +1,44 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using todolist_api.Database;
 using todolist_api.Models;
-using todolist_api.Repositories;
-using todolist_api.Services;
 
 namespace todolist_api.Controllers
 {
     [Route("api/[controller]")]
+    [Authorize]
     [ApiController]
-    public class UserController(IBaseRepository<User> users) : ControllerBase
+    public class UserController(ApplicationContext context) : ControllerBase
     {
-        private IBaseRepository<User> Users { get; set; }  = users;
+        private readonly ApplicationContext Context = context;
 
-        [HttpGet]
-        public async Task<ActionResult> GetUsers()
+        [HttpGet("me")]
+        public async Task<ActionResult> GetUser()
         {
-            return new JsonResult(await Users.GetAll());
-        }
+            var username = HttpContext.User.FindFirstValue(ClaimTypes.UserData);
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult> GetUser(int id)
-        {
-            return new JsonResult(await Users.Get(id));
-        }
-
-        [HttpPost]
-        public async Task<ActionResult> CreateNewUser(User user)
-        {
-            if(user == null)
+            if(string.IsNullOrEmpty(username))
             {
-                return BadRequest("Invalid user data");
+                return Unauthorized();
             }
 
             try
             {
-                await Users.Create(user);
+                var user = await Context.Users.SingleOrDefaultAsync(user => username == user.Username);
 
-                return CreatedAtAction(nameof(GetUser), new { id = user.Id }, user);
+                if(user == null)
+                {
+                    return NotFound("User not found");
+                }
+
+
+                return Ok(new { User = new UserGetDto()
+                {
+                    Id = user.Id,
+                    Username = user.Username
+                }});
             }
             catch(Exception e)
             {
