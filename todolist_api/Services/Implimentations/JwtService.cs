@@ -5,7 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace todolist_api.Services
 {
-    public class JwtService
+    public class JwtService : IJwtService
     {
         private readonly string _key;
         private readonly string _issuer;
@@ -18,14 +18,14 @@ namespace todolist_api.Services
             _audience = config["JWT:Audience"];
         }
 
-        public string GenerateToken(Models.User user)
+        public string GenerateToken(int userId)
         {
             var securityKey = new SymmetricSecurityKey(UTF8Encoding.UTF8.GetBytes(_key));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
 
             var claims = new[]
             {
-                new Claim(ClaimTypes.UserData, user.Username.ToString()),
+                new Claim(ClaimTypes.NameIdentifier, userId.ToString()),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
             };
 

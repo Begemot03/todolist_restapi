@@ -1,32 +1,44 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using todolist_api.Database;
+using todolist_api.Filters;
 using todolist_api.Models;
-using todolist_api.Repositories;
 
 namespace todolist_api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class TaskController(IBaseRepository<Models.Task> tasks, IBaseRepository<Models.List> lists) : ControllerBase
+    public class TaskController : ControllerBase
     {
-        public IBaseRepository<Models.Task> Tasks { get; } = tasks;
-        public IBaseRepository<Models.List> Lists { get; } = lists;
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult> GetTask(int id)
+        private readonly ApplicationContext _context;
+
+        public TaskController(ApplicationContext context)
+        {
+            _context = context;
+        }
+
+        [HttpGet("{taskId}")]
+        [AuthorizeTask]
+        public async Task<ActionResult> GetTask(int taskId)
         {
             try
             {
-                var task = await Tasks.Get(id);
+                var task = await _context.Tasks.Where(t => t.Id == taskId).FirstOrDefaultAsync();
 
-                return new JsonResult(new TaskDto() 
+                if(task == null)
+                {
+                    return NotFound();
+                }
+                
+                var taskDto = new TaskDto()
                 {
                     Id = task.Id,
                     Title = task.Title
-                });
-            }
-            catch(ArgumentException)
-            {
-                return NotFound("Task not found");
+                };
+
+                return Ok(task);
             }
             catch(Exception e)
             {
@@ -34,31 +46,116 @@ namespace todolist_api.Controllers
             }
         }
 
-        [HttpPost]
-        public async Task<ActionResult> CreateNewTask([FromQuery]int listId, [FromBody]TaskDto taskDto)
+        [HttpDelete("{taskId}")]
+        [AuthorizeTask]
+        public async Task<ActionResult> DeleteTask(int taskId)
         {
-            if(taskDto == null)
+            try
+            {
+                var task = await _context.Tasks.Where(t => t.Id == taskId).FirstOrDefaultAsync();
+
+                if(task == null)
+                {
+                    return NotFound();
+                }
+
+                _context.Tasks.Remove(task);
+                await _context.SaveChangesAsync();
+
+                return NoContent();
+            }
+            catch(Exception e)
+            {
+                return StatusCode(500, $"Internal server error: {e.Message}");
+            }
+        }
+
+        [HttpPut("{taskId}")]
+        [AuthorizeTask]
+        public async Task<ActionResult> UpdateTask(int taskId, [FromBody] UpdateTaskDto updateTaskDto)
+        {
+            try
+            {
+                if(updateTaskDto == null)
+                {
+                    return BadRequest("Invalid task data");
+                }
+
+                var userId = int.Parse(HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier));
+                var list = await _context.Lists
+                    .Where(l => l.Id == updateTaskDto.ListId && l.Board.Users.Any(u => u.Id == userId))
+                    .FirstOrDefaultAsync();
+
+                if(list == null)
+                {
+                    return NotFound();
+                }
+
+                var task = await _context.Tasks
+                    .Where(t => t.Id == taskId)
+                    .FirstOrDefaultAsync();
+
+                if(task == null)
+                {
+                    return NotFound();
+                }
+
+                task.Title = updateTaskDto.Title;
+                task.List = list;
+
+                await _context.SaveChangesAsync();
+
+                var taskDto = new TaskDto()
+                {
+                    Id = task.Id,
+                    Title = task.Title
+                };
+
+                return Ok(taskDto);
+            }
+            catch(Exception e)
+            {
+                return StatusCode(500, $"Internal server error: {e.Message}");
+            }
+        }
+
+
+
+        [HttpPost]
+        public async Task<ActionResult> CreateNewTask([FromBody]CreateTaskDto createTaskDto)
+        {
+            if(createTaskDto == null)
             {
                 return BadRequest("Invalid task data");
             }
 
             try
             {
-                var list = await Lists.Get(listId);
+                var userId = int.Parse(HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier));
+
+                var list = await _context.Lists.SingleOrDefaultAsync(l => l.Id == createTaskDto.ListId && l.Board.Users.Any(u => u.Id == userId));
+
+                if(list == null)
+                {
+                    return NotFound();
+                }
 
                 var task = new Models.Task()
                 {
-                    Title = taskDto.Title,
+                    Title = createTaskDto.Title,
                     List = list,
                 };
 
-                await Tasks.Create(task);
+                await _context.Tasks.AddAsync(task);
+                await _context.SaveChangesAsync();
 
-                return CreatedAtAction(nameof(GetTask), new { Id = task.Id }, new TaskDto
+                var taskDto = new TaskDto()
                 {
                     Id = task.Id,
                     Title = task.Title
-                });
+                };
+
+                return CreatedAtAction(nameof(GetTask), new { Id = task.Id }, taskDto);
             }
             catch(ArgumentException e)
             {

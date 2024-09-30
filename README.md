@@ -1,25 +1,92 @@
 # Описание API
 
-## Получение своих данных
-GET: /api/user/me
--H Authorization: "Bearer <Token>"
-Return: { "User" : { "Id": <UserId>, "Username": <Username> } } 
+## Работа с пользователями
+### 1. **Получение своих данных**
+- **GET**: `/api/user/me`
+- **-H Authorization**: `"Bearer <Token>"`
+- **Return**: ```json
+    {
+        "Id": "<UserId>",
+        "Username": "<Username>"
+    } ```
 
-## Регистрация нового пользователя в системе
+### Регистрация нового пользователя в системе
 POST: /api/user/registration
 Body: { "Username": <Username>, "PasswordHash": <PasswordHash> }
 Return: { "Token": <Token> } 
 
-## Вход в систему от пользователя
+### Вход в систему от пользователя
 POST: /api/auth/login
 Body: { "Username": <Username>, "PasswordHash": <PasswordHash>, "Id": <Id> }
 Return: { "Token": <Token> } 
 
+### Получение всех досок
+GET: /api/board
+-H Authorization: "Bearer <Token>"
+Return: [{ "Id" <BoardId>, "Title": <BoardTitle> }, ...]
 
-curl -X POST http://localhost:5229/api/auth/login -H "Content-Type: application/json" -d '{ "Username": "Rail1", "PasswordHash": "123456789" }'
+### Получение доски по id
+GET: /api/board/<BoardId>
+-H Authorization: "Bearer <Token>"
+Return: { "Id": <BoardId>, "Title": <BoardTitle>, "Lists": [{ "Id": <ListId>, "Title": <ListTitle>, "Tasks": [{ "Id": <TaskId>, "Title": <TaskTitle> }, ...] }, ...] }
 
-curl -X POST http://localhost:5229/api/auth/login -H "Content-Type: application/json" -d '{ "Username": "Rail", "PasswordHash": "123456789" }'
+### Удаление доски по id
+DELETE /api/board/<BoardId>
+-H Authorization: "Bearer <Token>"
+Return: NoContent
 
-curl -X GET http://localhost:5229/api/board/1 -H "Content-Type: application/json" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3VzZXJkYXRhIjoiUmFpbDEiLCJqdGkiOiJkYWE2MTIzOS0xYzE0LTQ0YjEtYjU0MS03OGMwMWYzZTMyZGMiLCJleHAiOjE3Mjc1OTc0MTksImlzcyI6ImxvY2FsaG9zdDo1MjI5IiwiYXVkIjoibG9jYWxob3N0OjUyMjkifQ.QFw-tIhmEq4TBeDhkkLN63ywUt0qmOK2mXL49_uHcP0"
+### Обновление доски по id
+PUT /api/board/<BoardId>
+-H Authorization: "Bearer <Token>"
+Body: { "Title": <NewBoardTitle> }
+Return: { "Title": <UpdatedBoardTitle> }
 
-curl -X GET http://localhost:5229/api/board/1 -H "Content-Type: application/json" -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy5taWNyb3NvZnQuY29tL3dzLzIwMDgvMDYvaWRlbnRpdHkvY2xhaW1zL3VzZXJkYXRhIjoiUmFpbCIsImp0aSI6Ijg0YjQzYmQ5LTY2ZjUtNDNiYS1iY2U4LWJiYmJkZTE2YWJiZiIsImV4cCI6MTcyNzU5NzQyMywiaXNzIjoibG9jYWxob3N0OjUyMjkiLCJhdWQiOiJsb2NhbGhvc3Q6NTIyOSJ9.n04JAcwtPBSphQtGbaUGeiPMQuGi0g-8WC4o12NC6kQ"
+### Создание новой доски
+POST /api/board
+-H Authorization: "Bearer <Token>"
+Body: { "Title": <BoardTitle> }
+Return: { "Id": <BoardId>, "Title": <BoardTitle> }
+
+### Создание нового листа
+POST /api/list
+-H Authorization: "Bearer <Token>"
+Body: { "Title": <ListTitle> }
+Return: { "Id": <ListId>, "Title": <ListTitle> }
+
+### Обновление листа по id
+PUT /api/list/<ListId>
+-H Authorization: "Bearer <Token>"
+Body: { "Title": <NewListTitle> }
+Return: { "Id": <ListId>, "Title": <UpdatedListId> }
+
+### Получение листа по id
+GET /api/list/<ListId>
+-H Authorization: "Bearer <Token>"
+Return: { "Id": <ListId>, "Title": <ListTitle>, "Tasks": [{ "Id": <TaskId>, "Title": <TaskTitle> }, ...] }
+
+### Удаление листа по id
+DELETE /api/list/<ListId>
+-H Authorization: "Bearer <Token>"
+Return: NoContent
+
+### Создание нового таска
+POST /api/task
+-H Authorization: "Bearer <Token>"
+Body: { "Title": <TaskTitle> }
+Return: { "Id": <TaskId>, "Title": <TaskTitle> }
+
+### Получение таска по id
+GET /api/task/<TaskId>
+-H Authorization: "Bearer <Token>"
+Return: { "Id": <TaskId>, "Title": <TaskTitle> }
+
+### Обновление таска по id
+PUT /api/task/<TaskId>
+-H Authorization: "Bearer <Token>"
+Body: { "Title": <NewTaskTitle>, "ListId": <NewListId> }
+Return: { "Id": <TaskId>, "Title": <UpdatedTaskTitle> }
+
+### Удаление таска по id
+DELETE /api/task/<TaskId>
+-H Authorization: "Bearer <Token>"
+Return: NoContent

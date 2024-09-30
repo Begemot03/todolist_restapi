@@ -4,15 +4,21 @@ using Microsoft.AspNetCore.Mvc;
 using todolist_api.Database;
 using todolist_api.Models;
 using System.Security.Claims;
+using todolist_api.Filters;
 
 namespace todolist_api.Controllers
 {
     [Route("api/[controller]")]
     [Authorize]
     [ApiController]
-    public class BoardController(ApplicationContext context) : ControllerBase
+    public class BoardController : ControllerBase
     {
-        private readonly ApplicationContext Context = context;
+        private readonly ApplicationContext _context;
+
+        public BoardController(ApplicationContext context)
+        {
+            _context = context;
+        }
 
         [HttpPost]
         public async Task<ActionResult> CreateNewBoard([FromBody]BoardDto boardDto)
@@ -22,21 +28,23 @@ namespace todolist_api.Controllers
                 return BadRequest("Invalid board data");
             }
 
-            var username = HttpContext.User.FindFirstValue(ClaimTypes.UserData);
+            var userId = int.Parse(HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier));
 
             try
             {
-                var user = await Context.Users.SingleAsync(user => user.Username == username);
+                var user = await _context.Users.SingleAsync(user => user.Id == userId);
 
                 var board = new Board()
                 {
                     Title = boardDto.Title
                 };
 
-                Context.Boards.Add(board);
+                _context.Boards.Add(board);
                 user.Boards.Add(board);
 
-                await Context.SaveChangesAsync();
+                await _context.SaveChangesAsync();
+
+                boardDto.Id = board.Id;
 
                 return CreatedAtAction(nameof(GetBoard), new { board.Id }, boardDto);
             }
@@ -44,32 +52,31 @@ namespace todolist_api.Controllers
             {
                 return StatusCode(500, $"Internal server error: {e.Message}");
             }
-           
         }
 
-        [HttpGet("{id}")]
-        public async Task<ActionResult> GetBoard(int id)
+        [HttpGet("{boardId}")]
+        [AuthorizeBoard]
+        public async Task<ActionResult> GetBoard(int boardId)
         {
-            if(id < 0) return BadRequest("Invalid Id");
-
-            var username = HttpContext.User.FindFirstValue(ClaimTypes.UserData);
-
             try
             {
-                var hasAccess = await UserHasAccessToBoard(id, username);
-
-                if(!hasAccess)
-                {
-                    return NotFound();
-                }
-
-                var board = await Context.Boards
+                var board = await _context.Boards
                     .AsNoTracking()
-                    .Where(b => b.Id == id)
+                    .Where(b => b.Id == boardId)
                     .Select(b => new BoardDto()
                     {
                         Id = b.Id,
-                        Title = b.Title
+                        Title = b.Title,
+                        Lists = b.Lists.Select(l => new ListDto()
+                        {
+                            Id = l.Id,
+                            Title = l.Title,
+                            Tasks = l.Tasks.Select(t => new TaskDto()
+                            {
+                                Id = t.Id,
+                                Title = t.Title
+                            }).ToList()
+                        }).ToList()
                     })
                     .FirstOrDefaultAsync();
             
@@ -79,7 +86,7 @@ namespace todolist_api.Controllers
                     return NotFound();
                 }
 
-                return Ok(new { Board = board });
+                return Ok(board);
             }
             catch(Exception e)
             {
@@ -87,12 +94,86 @@ namespace todolist_api.Controllers
             }
         }
 
-        private async Task<bool> UserHasAccessToBoard(int boardId, string username)
+        [HttpDelete("{boardId}")]
+        [AuthorizeBoard]
+        public async Task<ActionResult> DeleteBoard(int boardId)
         {
-            return await Context.Boards
-                .AsNoTracking()
-                .AnyAsync(b => b.Id == boardId && b.Users.Any(u => u.Username == username));
+            try
+            {
+                var board = await _context.Boards
+                    .Where(b => b.Id == boardId)
+                    .FirstOrDefaultAsync();
+
+                if(board == null)
+                {
+                    return NotFound();
+                }
+
+                _context.Boards.Remove(board);
+                await _context.SaveChangesAsync();
+
+                return NoContent();
+            }
+            catch(Exception e)
+            {
+                return StatusCode(500, $"Internal server error: {e.Message}");
+            }
         }
 
+        [HttpPut("{boardId}")]
+        [AuthorizeBoard]
+        public async Task<ActionResult> UpdateBoard(int boardId, [FromBody] UpdateBoardDto updateBoardDto)
+        {
+            try
+            {
+                var board = await _context.Boards
+                    .Where(b => b.Id == boardId)
+                    .FirstOrDefaultAsync();
+
+                if(board == null)
+                {
+                    return NotFound();
+                }
+
+                board.Title = updateBoardDto.Title;
+
+                return Ok(updateBoardDto);
+            }
+            catch(Exception e)
+            {
+                return StatusCode(500, $"Internal server error: {e.Message}");
+            }
+        }
+
+        [HttpGet]
+        public async Task<ActionResult> GetBoards()
+        {
+            try
+            {
+                var userId = int.Parse(HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier));
+
+                var boards = await _context.Boards
+                    .AsNoTracking()
+                    .Where(b => b.Users.Any(u => u.Id == userId))
+                    .Select(b => new BoardDto()
+                    {
+                        Id = b.Id,
+                        Title = b.Title
+                    })
+                    .ToListAsync();
+
+                if(boards == null)
+                {
+                    return NotFound();
+                }
+
+                return Ok(boards);
+                    
+            }
+            catch(Exception e)
+            {
+                return StatusCode(500, $"Internal server error: {e.Message}");
+            }
+        }
     }
 }

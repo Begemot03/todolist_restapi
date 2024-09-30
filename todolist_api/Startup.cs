@@ -41,7 +41,8 @@ namespace todolist_api
             services.AddTransient<IBaseRepository<List>, BaseRepository<List>>();
             services.AddTransient<IBaseRepository<Task>, BaseRepository<Task>>();
 
-            services.AddSingleton<JwtService>();
+            services.AddSingleton<IJwtService, JwtService>();
+            services.AddScoped<IAuthorizeService, AuthorizeService>();
 
             services.AddMvc();
         }

@@ -4,5 +4,6 @@ namespace todolist_api.Models
     {
         public int Id { get; set; }
         public string Title { get; set; }
+        public List<TaskDto> Tasks { get; set; }
     }
 }

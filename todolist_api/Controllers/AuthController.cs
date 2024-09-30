@@ -7,10 +7,16 @@ namespace todolist_api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class AuthController(UserLoginRepository users, JwtService jwtService) : ControllerBase
+    public class AuthController : ControllerBase
     {
-        private readonly UserLoginRepository Users = users;
-        private readonly JwtService JwtService = jwtService;
+        private readonly UserLoginRepository _users;
+        private readonly IJwtService _jwtService;
+
+        public AuthController(UserLoginRepository users, IJwtService jwtService)
+        {
+            _users = users;
+            _jwtService = jwtService;
+        }
 
         [HttpPost("login")]
         public async Task<ActionResult> Login([FromBody] UserAuthDto userDto)
@@ -22,19 +28,16 @@ namespace todolist_api.Controllers
             
             try
             {
-                var isExist = await Users.IsUserExists(userDto);
+                var isExist = await _users.IsUserExists(userDto);
 
                 if(isExist)
                 {
-                    var pass = await Users.IsPasswordCorrect(userDto);
+                    var pass = await _users.IsPasswordCorrect(userDto);
 
                     if(pass)
                     {
-                        var token = JwtService.GenerateToken(new User()
-                        {
-                            Username = userDto.Username,
-                            PasswordHash = userDto.PasswordHash
-                        });
+                        var user = await _users.GetUser(userDto.Username);
+                        var token = _jwtService.GenerateToken(user.Id);
 
                         return Ok(new { Token = token });
                     }
@@ -65,16 +68,16 @@ namespace todolist_api.Controllers
 
             try
             {
-                var isExist = await Users.IsUserExists(userDto);
+                var isExist = await _users.IsUserExists(userDto);
 
                 if(isExist)
                 {
                     return StatusCode(404, new { Token = "User already exist" });
                 }
 
-                var user = await Users.AddNewUser(userDto);
+                var user = await _users.AddNewUser(userDto);
 
-                var token = JwtService.GenerateToken(user);
+                var token = _jwtService.GenerateToken(user.Id);
 
                 return Ok(new { Token = token });
             }

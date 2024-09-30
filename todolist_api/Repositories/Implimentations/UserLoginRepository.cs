@@ -29,6 +29,13 @@ namespace todolist_api.Repositories
             return user;
         }
 
+        public async Task<User?> GetUser(string username)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
+
+            return user;
+        }
+
         public async Task<bool> IsUserExists(UserAuthDto userDto)
         {
             try
