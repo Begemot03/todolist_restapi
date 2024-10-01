@@ -5,6 +5,8 @@ using todolist_api.Database;
 using todolist_api.Models;
 using System.Security.Claims;
 using todolist_api.Filters;
+using todolist_api.Services;
+using System.ComponentModel.DataAnnotations;
 
 namespace todolist_api.Controllers
 {
@@ -14,29 +16,26 @@ namespace todolist_api.Controllers
     public class BoardController : ControllerBase
     {
         private readonly ApplicationContext _context;
+        private readonly IUserService _userService;
 
-        public BoardController(ApplicationContext context)
+        public BoardController(ApplicationContext context, IUserService userService)
         {
             _context = context;
+            _userService = userService;
         }
 
         [HttpPost]
-        public async Task<ActionResult> CreateNewBoard([FromBody]BoardDto boardDto)
+        public async Task<ActionResult> CreateNewBoard([Required][FromBody]CreateBoardDto createBoardDto)
         {
-            if(boardDto == null || string.IsNullOrEmpty(boardDto.Title))
-            {
-                return BadRequest("Invalid board data");
-            }
-
-            var userId = int.Parse(HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier));
-
             try
             {
+                var userId = _userService.GetUserId();
                 var user = await _context.Users.SingleAsync(user => user.Id == userId);
 
                 var board = new Board()
                 {
-                    Title = boardDto.Title
+                    Title = createBoardDto.Title,
+                    Lists = []
                 };
 
                 _context.Boards.Add(board);
@@ -44,9 +43,7 @@ namespace todolist_api.Controllers
 
                 await _context.SaveChangesAsync();
 
-                boardDto.Id = board.Id;
-
-                return CreatedAtAction(nameof(GetBoard), new { board.Id }, boardDto);
+                return CreatedAtAction(nameof(GetBoard), new { board.Id }, CreateBoardDto(board));
             }
             catch(Exception e)
             {
@@ -60,33 +57,14 @@ namespace todolist_api.Controllers
         {
             try
             {
-                var board = await _context.Boards
-                    .AsNoTracking()
-                    .Where(b => b.Id == boardId)
-                    .Select(b => new BoardDto()
-                    {
-                        Id = b.Id,
-                        Title = b.Title,
-                        Lists = b.Lists.Select(l => new ListDto()
-                        {
-                            Id = l.Id,
-                            Title = l.Title,
-                            Tasks = l.Tasks.Select(t => new TaskDto()
-                            {
-                                Id = t.Id,
-                                Title = t.Title
-                            }).ToList()
-                        }).ToList()
-                    })
-                    .FirstOrDefaultAsync();
-            
+                var board = await GetBoardById(boardId);
 
                 if (board == null)
                 {
                     return NotFound();
                 }
 
-                return Ok(board);
+                return Ok(CreateBoardDto(board));
             }
             catch(Exception e)
             {
@@ -100,9 +78,7 @@ namespace todolist_api.Controllers
         {
             try
             {
-                var board = await _context.Boards
-                    .Where(b => b.Id == boardId)
-                    .FirstOrDefaultAsync();
+                var board = await GetBoardById(boardId);
 
                 if(board == null)
                 {
@@ -122,13 +98,11 @@ namespace todolist_api.Controllers
 
         [HttpPut("{boardId}")]
         [AuthorizeBoard]
-        public async Task<ActionResult> UpdateBoard(int boardId, [FromBody] UpdateBoardDto updateBoardDto)
+        public async Task<ActionResult> UpdateBoard(int boardId, [Required][FromBody] UpdateBoardDto updateBoardDto)
         {
             try
             {
-                var board = await _context.Boards
-                    .Where(b => b.Id == boardId)
-                    .FirstOrDefaultAsync();
+                var board = await GetBoardById(boardId);
 
                 if(board == null)
                 {
@@ -137,7 +111,7 @@ namespace todolist_api.Controllers
 
                 board.Title = updateBoardDto.Title;
 
-                return Ok(updateBoardDto);
+                return Ok(CreateBoardDto(board));
             }
             catch(Exception e)
             {
@@ -150,16 +124,12 @@ namespace todolist_api.Controllers
         {
             try
             {
-                var userId = int.Parse(HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier));
+                var userId = _userService.GetUserId();
 
                 var boards = await _context.Boards
                     .AsNoTracking()
                     .Where(b => b.Users.Any(u => u.Id == userId))
-                    .Select(b => new BoardDto()
-                    {
-                        Id = b.Id,
-                        Title = b.Title
-                    })
+                    .Select(b => CreateBoardDto(b))
                     .ToListAsync();
 
                 if(boards == null)
@@ -175,5 +145,27 @@ namespace todolist_api.Controllers
                 return StatusCode(500, $"Internal server error: {e.Message}");
             }
         }
+
+        private async Task<Board?> GetBoardById(int boardId)
+        {
+            return await _context.Boards
+                .SingleOrDefaultAsync(b => b.Id == boardId);
+        }
+
+        private BoardDto CreateBoardDto(Board board) => new()
+        {
+            Id = board.Id,
+            Title = board.Title,
+            Lists = board.Lists.Select(l => new ListDto()
+            {
+                Id = l.Id,
+                Title = l.Title,
+                Tasks = l.Tasks.Select(t => new TaskDto()
+                {
+                    Id = t.Id,
+                    Title = t.Title
+                }).ToList()
+            }).ToList()
+        };
     }
 }

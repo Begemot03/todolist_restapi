@@ -17,28 +17,24 @@ namespace todolist_api.Controllers
         [HttpGet("me")]
         public async Task<ActionResult> GetUser()
         {
-            var username = HttpContext.User.FindFirstValue(ClaimTypes.UserData);
-
-            if(string.IsNullOrEmpty(username))
-            {
-                return Unauthorized();
-            }
-
             try
             {
-                var user = await Context.Users.SingleOrDefaultAsync(user => username == user.Username);
+                var userId = int.Parse(HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier));
+
+                var user = await Context.Users.SingleOrDefaultAsync(u => u.Id == userId);
 
                 if(user == null)
                 {
-                    return NotFound("User not found");
+                    return NotFound();
                 }
 
-
-                return Ok(new { User = new UserGetDto()
+                var userDto = new UserDto()
                 {
                     Id = user.Id,
                     Username = user.Username
-                }});
+                };
+
+                return Ok(userDto);
             }
             catch(Exception e)
             {

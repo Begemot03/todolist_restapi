@@ -1,9 +1,11 @@
+using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using todolist_api.Database;
 using todolist_api.Filters;
 using todolist_api.Models;
+using todolist_api.Services;
 
 namespace todolist_api.Controllers
 {
@@ -13,10 +15,12 @@ namespace todolist_api.Controllers
     {
 
         private readonly ApplicationContext _context;
+        private readonly IUserService _userService;
 
-        public TaskController(ApplicationContext context)
+        public TaskController(ApplicationContext context, IUserService userService)
         {
             _context = context;
+            _userService = userService;
         }
 
         [HttpGet("{taskId}")]
@@ -25,20 +29,14 @@ namespace todolist_api.Controllers
         {
             try
             {
-                var task = await _context.Tasks.Where(t => t.Id == taskId).FirstOrDefaultAsync();
+                var task = await GetTaskById(taskId);
 
                 if(task == null)
                 {
                     return NotFound();
                 }
-                
-                var taskDto = new TaskDto()
-                {
-                    Id = task.Id,
-                    Title = task.Title
-                };
 
-                return Ok(task);
+                return Ok(CreateTaskDto(task));
             }
             catch(Exception e)
             {
@@ -52,7 +50,7 @@ namespace todolist_api.Controllers
         {
             try
             {
-                var task = await _context.Tasks.Where(t => t.Id == taskId).FirstOrDefaultAsync();
+                var task = await GetTaskById(taskId);
 
                 if(task == null)
                 {
@@ -72,30 +70,16 @@ namespace todolist_api.Controllers
 
         [HttpPut("{taskId}")]
         [AuthorizeTask]
-        public async Task<ActionResult> UpdateTask(int taskId, [FromBody] UpdateTaskDto updateTaskDto)
+        public async Task<ActionResult> UpdateTask(int taskId, [Required][FromBody] UpdateTaskDto updateTaskDto)
         {
             try
             {
-                if(updateTaskDto == null)
-                {
-                    return BadRequest("Invalid task data");
-                }
+                var userId = _userService.GetUserId();
+                var list = await GetListById(updateTaskDto.ListId, userId);
 
-                var userId = int.Parse(HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier));
-                var list = await _context.Lists
-                    .Where(l => l.Id == updateTaskDto.ListId && l.Board.Users.Any(u => u.Id == userId))
-                    .FirstOrDefaultAsync();
+                var task = await GetTaskById(taskId);
 
-                if(list == null)
-                {
-                    return NotFound();
-                }
-
-                var task = await _context.Tasks
-                    .Where(t => t.Id == taskId)
-                    .FirstOrDefaultAsync();
-
-                if(task == null)
+                if(task == null || list == null)
                 {
                     return NotFound();
                 }
@@ -105,13 +89,7 @@ namespace todolist_api.Controllers
 
                 await _context.SaveChangesAsync();
 
-                var taskDto = new TaskDto()
-                {
-                    Id = task.Id,
-                    Title = task.Title
-                };
-
-                return Ok(taskDto);
+                return Ok(CreateTaskDto(task));
             }
             catch(Exception e)
             {
@@ -122,18 +100,12 @@ namespace todolist_api.Controllers
 
 
         [HttpPost]
-        public async Task<ActionResult> CreateNewTask([FromBody]CreateTaskDto createTaskDto)
+        public async Task<ActionResult> CreateNewTask([Required][FromBody]CreateTaskDto createTaskDto)
         {
-            if(createTaskDto == null)
-            {
-                return BadRequest("Invalid task data");
-            }
-
             try
             {
-                var userId = int.Parse(HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier));
-
-                var list = await _context.Lists.SingleOrDefaultAsync(l => l.Id == createTaskDto.ListId && l.Board.Users.Any(u => u.Id == userId));
+                var userId = _userService.GetUserId();
+                var list = await GetListById(createTaskDto.ListId, userId);
 
                 if(list == null)
                 {
@@ -149,22 +121,28 @@ namespace todolist_api.Controllers
                 await _context.Tasks.AddAsync(task);
                 await _context.SaveChangesAsync();
 
-                var taskDto = new TaskDto()
-                {
-                    Id = task.Id,
-                    Title = task.Title
-                };
-
-                return CreatedAtAction(nameof(GetTask), new { Id = task.Id }, taskDto);
-            }
-            catch(ArgumentException e)
-            {
-                return NotFound($"{e.Message}");
+                return CreatedAtAction(nameof(GetTask), new { task.Id }, CreateTaskDto(task));
             }
             catch(Exception e)
             {
                 return StatusCode(500, $"Internal server error: {e.Message}");
             }
         }
+
+        private async Task<Models.Task?> GetTaskById(int taskId)
+        {
+            return await _context.Tasks.Where(t => t.Id == taskId).SingleOrDefaultAsync();
+        }
+
+        private async Task<List?> GetListById(int listId, int userId)
+        {
+            return await _context.Lists.SingleOrDefaultAsync(l => l.Id == listId && l.Board.Users.Any(u => u.Id == userId));
+        }
+
+        private TaskDto CreateTaskDto(Models.Task task) => new()
+        {
+            Id = task.Id,
+            Title = task.Title
+        };
     }
 }

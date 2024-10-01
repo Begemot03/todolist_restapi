@@ -1,3 +1,4 @@
+using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 using todolist_api.Models;
 using todolist_api.Repositories;
@@ -19,37 +20,27 @@ namespace todolist_api.Controllers
         }
 
         [HttpPost("login")]
-        public async Task<ActionResult> Login([FromBody] UserAuthDto userDto)
+        public async Task<ActionResult> Login([Required][FromBody] UserAuthDto userDto)
         {
-            if(userDto == null || string.IsNullOrEmpty(userDto.Username) || string.IsNullOrEmpty(userDto.PasswordHash))
-            {
-                return BadRequest("Invalid user data");
-            }
-            
             try
             {
-                var isExist = await _users.IsUserExists(userDto);
+                var user = await _users.GetUser(userDto.Username);
 
-                if(isExist)
-                {
-                    var pass = await _users.IsPasswordCorrect(userDto);
-
-                    if(pass)
-                    {
-                        var user = await _users.GetUser(userDto.Username);
-                        var token = _jwtService.GenerateToken(user.Id);
-
-                        return Ok(new { Token = token });
-                    }
-                    else
-                    {
-                        return Unauthorized();
-                    }
-                }
-                else
+                if(user == null)
                 {
                     return Unauthorized();
                 }
+
+                var isPasswordCorrect = await _users.IsDataCorrect(userDto);
+
+                if(!isPasswordCorrect)
+                {
+                    return Unauthorized();
+                }
+
+                var token = _jwtService.GenerateToken(user.Id);
+
+                return Ok(token);
             }
             catch(Exception e)
             {
@@ -59,27 +50,22 @@ namespace todolist_api.Controllers
 
 
         [HttpPost("registration")]
-        public async Task<ActionResult> Registration([FromBody] UserAuthDto userDto)
+        public async Task<ActionResult> Registration([Required][FromBody] UserAuthDto userDto)
         {
-            if(userDto == null || string.IsNullOrEmpty(userDto.Username) || string.IsNullOrEmpty(userDto.PasswordHash))
-            {
-                return BadRequest("Invalid user data");
-            }
-
             try
             {
                 var isExist = await _users.IsUserExists(userDto);
 
                 if(isExist)
                 {
-                    return StatusCode(404, new { Token = "User already exist" });
+                    return Conflict(new { message = "User already exists" }); 
                 }
 
                 var user = await _users.AddNewUser(userDto);
 
                 var token = _jwtService.GenerateToken(user.Id);
 
-                return Ok(new { Token = token });
+                return Ok(token);
             }
             catch(Exception e)
             {

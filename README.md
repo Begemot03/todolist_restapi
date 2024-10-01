@@ -14,11 +14,11 @@
 - **Body**: ```json 
     { 
         "Username": "<Username>", 
-        "PasswordHash": "<PasswordHash>" 
+        "Password": "<Password>" 
     }```
 - **Return**: ```json
     {
-        "Token": "<Token>" 
+        "<Token>"
     }```
 
 ### 3. Вход в систему от пользователя
@@ -26,11 +26,11 @@
 - **Body**: ```json 
     { 
         "Username": "<Username>", 
-        "PasswordHash": "<PasswordHash>"
+        "Password": "<Password>"
     }```
 - **Return**: ```json 
     { 
-        "Token": <Token> 
+        "<Token>"
     }```
 
 ## Работа с досками

@@ -1,16 +1,19 @@
 using Microsoft.EntityFrameworkCore;
 using todolist_api.Database;
 using todolist_api.Models;
+using todolist_api.Services;
 
 namespace todolist_api.Repositories
 {
     public class UserLoginRepository
     {
         private readonly ApplicationContext _context;
+        private readonly IPasswordHasherService _passwordHasherService;
 
-        public UserLoginRepository(ApplicationContext context)
+        public UserLoginRepository(ApplicationContext context, IPasswordHasherService passwordHasherService)
         {
             _context = context;
+            _passwordHasherService = passwordHasherService;
         }
 
         public async Task<User> AddNewUser(UserAuthDto userDto)
@@ -19,7 +22,7 @@ namespace todolist_api.Repositories
             var user = new User()
             {
                 Username = userDto.Username,
-                PasswordHash = userDto.PasswordHash
+                Password = _passwordHasherService.HashPassword(userDto.Password)
             };
 
             await _context.Set<User>().AddAsync(user);
@@ -31,42 +34,24 @@ namespace todolist_api.Repositories
 
         public async Task<User?> GetUser(string username)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
-
-            return user;
+            return await _context.Users.FirstOrDefaultAsync(u => u.Username == username);
         }
 
         public async Task<bool> IsUserExists(UserAuthDto userDto)
         {
-            try
-            {
-                var isExist = await _context.Users.AnyAsync(user => user.Username == userDto.Username);
-
-                return isExist;
-            }
-            catch
-            {
-                return false;
-            }
+            return await GetUser(userDto.Username) != null;
         }
 
-        public async Task<bool> IsPasswordCorrect(UserAuthDto userDto)
+        public async Task<bool> IsDataCorrect(UserAuthDto userDto)
         {
-            try
-            {
-                var user = await _context.Users.SingleAsync(user => user.Username == userDto.Username);
+            var user = await _context.Users.SingleOrDefaultAsync(user => user.Username == userDto.Username);
 
-                if(user != null)
-                {
-                    return user.PasswordHash == userDto.PasswordHash;
-                }
-
-                return false;
-            }
-            catch
+            if(user == null)
             {
                 return false;
             }
+
+            return _passwordHasherService.VerifyPassword(user.Password, userDto.Password);
         }
     }
 }
