@@ -36,10 +36,12 @@ namespace todolist_api
                     };
                 });
 
+            services.AddHttpContextAccessor();
             services.AddSingleton<IJwtService, JwtService>();
             services.AddSingleton<IPasswordHasherService, PasswordHasherService>();
             services.AddScoped<IAuthorizeService, AuthorizeService>();
             services.AddScoped<IUserService, UserService>();
+            services.AddTransient<UserLoginRepository>();
 
 
             services.AddMvc();

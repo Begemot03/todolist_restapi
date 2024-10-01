@@ -43,7 +43,7 @@ namespace todolist_api.Controllers
 
                 await _context.SaveChangesAsync();
 
-                return CreatedAtAction(nameof(GetBoard), new { board.Id }, CreateBoardDto(board));
+                return CreatedAtAction(nameof(GetBoard), new { boardId = board.Id }, CreateBoardDto(board));
             }
             catch(Exception e)
             {
@@ -110,6 +110,8 @@ namespace todolist_api.Controllers
                 }
 
                 board.Title = updateBoardDto.Title;
+                
+                await _context.SaveChangesAsync();
 
                 return Ok(CreateBoardDto(board));
             }
@@ -129,6 +131,8 @@ namespace todolist_api.Controllers
                 var boards = await _context.Boards
                     .AsNoTracking()
                     .Where(b => b.Users.Any(u => u.Id == userId))
+                    .Include(b => b.Lists)
+                    .ThenInclude(l => l.Tasks)
                     .Select(b => CreateBoardDto(b))
                     .ToListAsync();
 
@@ -149,10 +153,12 @@ namespace todolist_api.Controllers
         private async Task<Board?> GetBoardById(int boardId)
         {
             return await _context.Boards
+                .Include(b => b.Lists)
+                .ThenInclude(l => l.Tasks)
                 .SingleOrDefaultAsync(b => b.Id == boardId);
         }
 
-        private BoardDto CreateBoardDto(Board board) => new()
+        private static BoardDto CreateBoardDto(Board board) => new()
         {
             Id = board.Id,
             Title = board.Title,

@@ -11,7 +11,7 @@ using todolist_api.Database;
 namespace todolist_api.Migrations
 {
     [DbContext(typeof(ApplicationContext))]
-    [Migration("20240927140100_InitialMigration")]
+    [Migration("20241001111033_InitialMigration")]
     partial class InitialMigration
     {
         /// <inheritdoc />
@@ -108,7 +108,7 @@ namespace todolist_api.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("PasswordHash")
+                    b.Property<string>("Password")
                         .IsRequired()
                         .HasColumnType("text");
 
@@ -139,7 +139,7 @@ namespace todolist_api.Migrations
             modelBuilder.Entity("todolist_api.Models.List", b =>
                 {
                     b.HasOne("todolist_api.Models.Board", "Board")
-                        .WithMany()
+                        .WithMany("Lists")
                         .HasForeignKey("BoardId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -150,12 +150,22 @@ namespace todolist_api.Migrations
             modelBuilder.Entity("todolist_api.Models.Task", b =>
                 {
                     b.HasOne("todolist_api.Models.List", "List")
-                        .WithMany()
+                        .WithMany("Tasks")
                         .HasForeignKey("ListId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("List");
+                });
+
+            modelBuilder.Entity("todolist_api.Models.Board", b =>
+                {
+                    b.Navigation("Lists");
+                });
+
+            modelBuilder.Entity("todolist_api.Models.List", b =>
+                {
+                    b.Navigation("Tasks");
                 });
 #pragma warning restore 612, 618
         }

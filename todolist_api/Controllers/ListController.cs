@@ -84,6 +84,7 @@ namespace todolist_api.Controllers
                 }
 
                 list.Title = updateListDto.Title;
+                
                 await _context.SaveChangesAsync();
 
                 return Ok(CreateListDto(list));
@@ -118,7 +119,7 @@ namespace todolist_api.Controllers
                 await _context.AddAsync(list);
                 await _context.SaveChangesAsync();
 
-                return CreatedAtAction(nameof(GetList), new { list.Id }, CreateListDto(list));
+                return CreatedAtAction(nameof(GetList), new { listId = list.Id }, CreateListDto(list));
             }
             catch(Exception e)
             {
@@ -132,7 +133,7 @@ namespace todolist_api.Controllers
                 .SingleOrDefaultAsync(l => l.Id == listId);
         }
 
-        private ListDto CreateListDto(List list) => new()
+        private static ListDto CreateListDto(List list) => new()
         {
             Id = list.Id,
             Title = list.Title,

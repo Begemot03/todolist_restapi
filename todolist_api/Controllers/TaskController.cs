@@ -121,7 +121,7 @@ namespace todolist_api.Controllers
                 await _context.Tasks.AddAsync(task);
                 await _context.SaveChangesAsync();
 
-                return CreatedAtAction(nameof(GetTask), new { task.Id }, CreateTaskDto(task));
+                return CreatedAtAction(nameof(GetTask), new { taskId = task.Id }, CreateTaskDto(task));
             }
             catch(Exception e)
             {
@@ -139,7 +139,7 @@ namespace todolist_api.Controllers
             return await _context.Lists.SingleOrDefaultAsync(l => l.Id == listId && l.Board.Users.Any(u => u.Id == userId));
         }
 
-        private TaskDto CreateTaskDto(Models.Task task) => new()
+        private static TaskDto CreateTaskDto(Models.Task task) => new()
         {
             Id = task.Id,
             Title = task.Title
